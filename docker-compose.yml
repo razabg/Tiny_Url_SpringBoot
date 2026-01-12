@@ -1,0 +1,109 @@
+
+services:
+  app:
+    image: razabg/tiny:001
+    ports:
+      - "8080:8080"
+    depends_on:
+      # Wait for the init container to finish creating the keyspace
+      cassandra-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      mongo:
+        condition: service_started
+    environment:
+      # Ensure Java uses the docker service names
+      - SPRING_REDIS_HOST=redis
+      - SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/tinydb
+      - SPRING_DATA_CASSANDRA_CONTACT_POINTS=cassandra
+
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+
+  mongo:
+    image: mongo:4.0
+    ports:
+      - 27017:27017
+
+  cassandra:
+    image: "cassandra:3.11.9"
+    ports:
+      - "9042:9042"
+    environment:
+      - "MAX_HEAP_SIZE=256M"
+      - "HEAP_NEWSIZE=128M"
+    # HEALTH CHECK: Pings Cassandra every 10s to see if it's ready for connections
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "describe keyspaces"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # INIT SERVICE: Runs once to create the keyspace, then dies
+  cassandra-init:
+    image: "cassandra:3.11.9"
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    # The command attempts to create the keyspace if it doesn't exist
+    command: >
+      cqlsh cassandra -e "CREATE KEYSPACE IF NOT EXISTS tiny_keyspace WITH replication = {'class':'SimpleStrategy', 'replication_factor' : 1};"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#services:
+#  app:
+#    image: razabg/tiny_url:001
+#    ports:
+#      - "8080:8080"
+#    depends_on:
+#      - redis
+#      - mongo
+#      - cassandra
+#  redis:
+#    image: redis
+#    ports:
+#      - 6379:6379
+#    privileged: true
+#  mongo:
+#    image: mongo:4.0
+#    ports:
+#      - 27017:27017
+#    privileged: true
+#  cassandra:
+#    image: "cassandra:3.11.9"
+#    ports:
+#      - "9042:9042"
+#    environment:
+#      - "MAX_HEAP_SIZE=256M"
+#      - "HEAP_NEWSIZE=128M"

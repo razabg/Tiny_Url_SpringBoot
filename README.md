@@ -9,8 +9,11 @@ Converts long URLs into short, shareable links with built-in click tracking and 
 ## 🛠️ Tech Stack
 
 **Backend:** Java, Spring Boot, Maven  
+
 **Databases:** Redis (caching), MongoDB (URL storage), Cassandra (analytics)
-**Documentation:** Swagger UI (SpringDoc OpenAPI)
+
+**Documentation:** Swagger UI (SpringDoc OpenAPI) 
+
 **Deployment:** Docker, Docker Compose
 
 ## 🗄️ Database Architecture

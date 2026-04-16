@@ -4,7 +4,14 @@ public class NewTinyRequest {
 
     private String longUrl;
 
-    private  String userName;
+    private String userName;
+
+    public NewTinyRequest() {}
+
+    public NewTinyRequest(String longUrl, String userName) {
+        this.longUrl = longUrl;
+        this.userName = userName;
+    }
 
     public String getUserName() {
         return userName;

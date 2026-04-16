@@ -9,7 +9,7 @@ import java.util.Date;
 import java.util.Objects;
 
 @PrimaryKeyClass
-public class UserClickKey {
+public class  UserClickKey {
 
     @PrimaryKeyColumn(name = "user_name",ordinal = 0,type = PrimaryKeyType.PARTITIONED)
     private String userName;

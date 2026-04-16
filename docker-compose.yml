@@ -1,7 +1,7 @@
 
 services:
   app:
-    image: razabg/tiny:001
+    image: razabg/tiny:latest
     ports:
       - "8080:8080"
     depends_on:

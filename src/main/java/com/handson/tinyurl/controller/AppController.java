@@ -3,9 +3,11 @@ package com.handson.tinyurl.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.handson.tinyurl.model.NewTinyRequest;
+import com.handson.tinyurl.model.UrlMapping;
 import com.handson.tinyurl.model.User;
 import com.handson.tinyurl.model.UserClick;
 import com.handson.tinyurl.model.UserClickOut;
+import com.handson.tinyurl.repository.UrlMappingRepository;
 import com.handson.tinyurl.repository.UserClickRepository;
 import com.handson.tinyurl.repository.UserRepository;
 import com.handson.tinyurl.service.Redis;
@@ -50,8 +52,13 @@ public class AppController {
 
     Random random = new Random();
 
+    private static final long REDIS_TTL_SECONDS = 86400; // 24 hours
+
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UrlMappingRepository urlMappingRepository;
 
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -80,18 +87,26 @@ public class AppController {
     public String generate(@RequestBody NewTinyRequest request) throws JsonProcessingException {
         String tinyCode = generateTinyCode();
         int i = 0;
-        while (!redis.set(tinyCode, om.writeValueAsString(request)) && i < MAX_RETRIES) {
+        while (urlMappingRepository.findByShortCode(tinyCode) != null && i < MAX_RETRIES) {
             tinyCode = generateTinyCode();
             i++;
         }
         if (i == MAX_RETRIES) throw new RuntimeException("SPACE IS FULL");
+        urlMappingRepository.save(new UrlMapping(tinyCode, request.getLongUrl(), request.getUserName(), new Date()));
+        redis.set(tinyCode, om.writeValueAsString(request), REDIS_TTL_SECONDS);
         return baseUrl + tinyCode + "/";
     }
 
     @RequestMapping(value = "/{tiny}/", method = RequestMethod.GET)
     public ModelAndView getTiny(@PathVariable String tiny) throws JsonProcessingException {
         Object tinyRequestStr = redis.get(tiny);
-        NewTinyRequest tinyRequest = om.readValue(tinyRequestStr.toString(),NewTinyRequest.class);
+        if (tinyRequestStr == null) {
+            UrlMapping mapping = urlMappingRepository.findByShortCode(tiny);
+            if (mapping == null) throw new RuntimeException(tiny + " not found");
+            redis.set(tiny, om.writeValueAsString(new NewTinyRequest(mapping.getLongUrl(), mapping.getUserName())), REDIS_TTL_SECONDS);
+            tinyRequestStr = redis.get(tiny);
+        }
+        NewTinyRequest tinyRequest = om.readValue(tinyRequestStr.toString(), NewTinyRequest.class);
         if (tinyRequest.getLongUrl() != null) {
             String userName = tinyRequest.getUserName();
             if ( userName != null) {
